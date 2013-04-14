@@ -20,11 +20,6 @@
         $mysqli = new mysqli($host, $username, $password, $db);
         if ($stmt = $mysqli->prepare("SELECT `user_id`, `array_serialized` FROM `data_analysis` WHERE `data_analysis_type` = ? AND `nonrecurring_included` = ? AND `recurring_included` = ? ;")){
             
-            //$data_analysis_type = "day_of_the_week_created";
-            
-            //$nonrecurring_included = 1;
-            //$recurring_included = 0;
-            
             $stmt->bind_param('sii', $data_analysis_type, $nonrecurring_included, $recurring_included);
             $stmt->execute();
             $stmt->bind_result($user_id, $array_serialized);
@@ -45,7 +40,7 @@
         print('{ "cols": [ {"id":"","label":"day_of_the_week_created","pattern":"","type":"string"},');
         
         foreach($data as $user_id => $array_unserialized) {        
-            print('{"id":"","label":"'.$user_id.'","pattern":"","type":"number"},');
+            print('{"id":"","label":"User '.$user_id.'","pattern":"","type":"number"},');
         }
         
         print(' ], "rows": [ ');

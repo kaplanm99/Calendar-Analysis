@@ -6,7 +6,10 @@
     <script type="text/javascript">
     
     var data_analysis_type = "data_analysis_type=day_of_the_week_created&";
+    var data_analysis_type_text = "Day of the Week Created";
+    
     var event_type_included = "nonrecurring_included=1&recurring_included=0&";
+    var event_type_included_text = "Number of " + "Nonrecurring Events";
     
     // Load the Visualization API and the piechart package.
     google.load('visualization', '1', {'packages':['corechart']});
@@ -27,19 +30,23 @@
 
           // Instantiate and draw our chart, passing in some options.
           var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
-          chart.draw(data, {width: 900, height: 400, vAxis: {title: "Number of Nonrecurring Events"}, hAxis: {title: "Day of the Week Created"} });
+          chart.draw(data, {width: 900, height: 400, vAxis: {title: event_type_included_text }, hAxis: {title: data_analysis_type_text} });
         }
         
         $("#data_analysis_type").change(function() {
           data_analysis_type = $("#data_analysis_type").val();
-          event_type_included = $("#event_type_included").val();
+          $("#event_type_included option:selected").each(function () {
+            data_analysis_type_text = $(this).text();
+          });
           
           drawChart();
         });
         
         $("#event_type_included").change(function() {
-          data_analysis_type = $("#data_analysis_type").val();
-          event_type_included = $("#event_type_included").val();
+          event_type_included = $("#event_type_included").val();          
+          $("#event_type_included option:selected").each(function () {
+            event_type_included_text = "Number of " + $(this).text();
+          });
           
           drawChart();
         });
@@ -50,14 +57,21 @@
   <body>
     <form>
         <select id="data_analysis_type">
-            <option value="data_analysis_type=day_of_the_week_created&">day_of_the_week_created</option>
+            <option value="data_analysis_type=day_of_the_week_created&">Day of the Week Created</option>
+            <option value="data_analysis_type=day_of_the_week_started&">Day of the Week Started</option>
         </select>
 
         <select id="event_type_included">
             <option value="nonrecurring_included=1&recurring_included=0&">Nonrecurring Events</option>
             <option value="nonrecurring_included=0&recurring_included=1&">Recurring Events</option>
             <option value="nonrecurring_included=1&recurring_included=1&">Nonrecurring and Recurring Events</option>
-        </select> 
+        </select>
+        <!--
+        <select id="count_or_length">
+            <option value="count_or_length=0&">Count</option>
+            <option value="count_or_length=1&">Length</option>
+        </select>
+        -->
     </form>
     
     <!--Div that will hold the pie chart-->
