@@ -37,7 +37,7 @@
         
         
         
-        print('{ "cols": [ {"id":"","label":"day_of_the_week_created","pattern":"","type":"string"},');
+        print('{ "cols": [ {"id":"","label":"'.$data_analysis_type.'","pattern":"","type":"string"},');
         
         foreach($data as $user_id => $array_unserialized) {        
             print('{"id":"","label":"User '.$user_id.'","pattern":"","type":"number"},');
@@ -45,25 +45,55 @@
         
         print(' ], "rows": [ ');
         
-        $daysOfTheWeek = array();
-        $daysOfTheWeek[1] = "Monday";
-        $daysOfTheWeek[2] = "Tuesday";
-        $daysOfTheWeek[3] = "Wednesday";
-        $daysOfTheWeek[4] = "Thursday";
-        $daysOfTheWeek[5] = "Friday";
-        $daysOfTheWeek[6] = "Saturday";
-        $daysOfTheWeek[7] = "Sunday";
-        
-        for($i = 1;$i <= 7;$i++) {
+        if($data_analysis_type == "day_of_the_week_created" || $data_analysis_type == "day_of_the_week_started") { 
+            $daysOfTheWeek = array();
+            $daysOfTheWeek[1] = "Monday";
+            $daysOfTheWeek[2] = "Tuesday";
+            $daysOfTheWeek[3] = "Wednesday";
+            $daysOfTheWeek[4] = "Thursday";
+            $daysOfTheWeek[5] = "Friday";
+            $daysOfTheWeek[6] = "Saturday";
+            $daysOfTheWeek[7] = "Sunday";
             
-            print('{"c":[{"v":"'.$daysOfTheWeek[$i].'"},');
-            
-            foreach($data as $user_id => $array_unserialized) {            
-                print('{"v":'.floatval($array_unserialized[$i]).'},');
+            for($i = 1;$i <= 7;$i++) {
+                
+                print('{"c":[{"v":"'.$daysOfTheWeek[$i].'"},');
+                
+                foreach($data as $user_id => $array_unserialized) {            
+                    print('{"v":'.floatval($array_unserialized[$i]).'},');
+                }
+                
+                print(']},');
+                
             }
+        }
+        
+        if($data_analysis_type == "month_of_the_year_created") { 
+            $monthsOfTheYear = array();
+            $monthsOfTheYear[1] = "January";
+            $monthsOfTheYear[2] = "Febuary";
+            $monthsOfTheYear[3] = "March";
+            $monthsOfTheYear[4] = "April";
+            $monthsOfTheYear[5] = "May";
+            $monthsOfTheYear[6] = "June";
+            $monthsOfTheYear[7] = "July";
+            $monthsOfTheYear[8] = "August";
+            $monthsOfTheYear[9] = "September";
+            $monthsOfTheYear[10] = "October";
+            $monthsOfTheYear[11] = "November";
+            $monthsOfTheYear[12] = "December";
             
-            print(']},');
-            
+            for($i = 1;$i <= 12;$i++) {
+                
+                print('{"c":[{"v":"'.$monthsOfTheYear[$i].'"},');
+                
+                foreach($data as $user_id => $array_unserialized) {            
+                    print('{"v":'.floatval($array_unserialized[$i]).'},');
+                }
+                
+                print(']},');
+                
+            }
         }
         
         print(']}');

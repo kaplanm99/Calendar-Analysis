@@ -4,7 +4,7 @@
     require('getEvents.php');
     require('getEventsPerDay.php');
     
-    function processEventForDayOfTheWeekEventCreated(&$dayOfTheWeekEventCreatedCount, &$dayOfTheWeekEventStartedCount, $google_start, $google_end, $google_created) {
+    function processEventForDayOfTheWeekEventCreated(&$dayOfTheWeekEventCreatedCount, &$dayOfTheWeekEventStartedCount, &$monthOfTheYearEventCreatedCount, $google_start, $google_end, $google_created) {
         $startUnixTimestamp = strtotime($google_start);
         $endUnixTimestamp = strtotime($google_end);
         $createdUnixTimestamp = strtotime($google_created);    
@@ -21,11 +21,15 @@
             
             if($timeDifferenceInDays >= 0) {
                 $dayFormat = "N";
+                $monthFormat = "n";
                     
                 $google_createdDT = new DateTime($google_created);
                 $google_created_DayOfTheWeek = $google_createdDT->format($dayFormat);
+                $google_created_MonthOfTheYear = $google_createdDT->format($monthFormat);
                 
                 $dayOfTheWeekEventCreatedCount[$google_created_DayOfTheWeek]++;
+                $monthOfTheYearEventCreatedCount[$google_created_MonthOfTheYear]++;
+
                 
                 $google_startDT = new DateTime($google_start);
                 $google_start_DayOfTheWeek = $google_startDT->format($dayFormat);
@@ -52,7 +56,23 @@
         return $dayOfTheWeekSerialized;
     }
     
-    function getDayOfTheWeekEventCreated(&$dayOfTheWeekEventCreatedCount, &$dayOfTheWeekEventStartedCount, $events, $recurring) {
+    function normalizeAndSerializeMonthOfTheYear(&$monthOfTheYear) {
+        $monthOfTheYearSum = 0;
+        
+        for($i = 1;$i <= 12;$i++) {
+            $monthOfTheYearSum += $monthOfTheYear[$i];         
+        }
+        
+        for($i = 1;$i <= 12;$i++) {
+            $monthOfTheYear[$i] /= $monthOfTheYearSum;        
+        }
+        
+        $monthOfTheYearSerialized = serialize($monthOfTheYear);
+        
+        return $monthOfTheYearSerialized;
+    }
+    
+    function getDayOfTheWeekEventCreated(&$dayOfTheWeekEventCreatedCount, &$dayOfTheWeekEventStartedCount, &$monthOfTheYearEventCreatedCount, $events, $recurring) {
 
         if($recurring) {
             
@@ -92,7 +112,8 @@
                 
                 while($date = $recurrence->next()) {
                     
-                    processEventForDayOfTheWeekEventCreated($dayOfTheWeekEventCreatedCount,$dayOfTheWeekEventStartedCount, $date['dtstart'], $date['dtend'], $event["google_created"]);
+                    processEventForDayOfTheWeekEventCreated($dayOfTheWeekEventCreatedCount,$dayOfTheWeekEventStartedCount,
+                    $monthOfTheYearEventCreatedCount,                    $date['dtstart'], $date['dtend'], $event["google_created"]);
                     
                     $z++;
                     
@@ -103,7 +124,7 @@
             
         } else {
             foreach($events as $event) {
-                processEventForDayOfTheWeekEventCreated($dayOfTheWeekEventCreatedCount, $dayOfTheWeekEventStartedCount, $event["google_start"], $event["google_end"], $event["google_created"]);
+                processEventForDayOfTheWeekEventCreated($dayOfTheWeekEventCreatedCount, $dayOfTheWeekEventStartedCount, $monthOfTheYearEventCreatedCount, $event["google_start"], $event["google_end"], $event["google_created"]);
             }
         }
 
@@ -128,6 +149,9 @@
         $dayOfTheWeekReccurringEventStartedCount = array();        
         $dayOfTheWeekNonreccurringAndReccurringEventStartedCount = array();
         
+        $monthOfTheYearNonreccurringEventCreatedCount = array();
+        $monthOfTheYearReccurringEventCreatedCount = array();        
+        $monthOfTheYearNonreccurringAndReccurringEventCreatedCount = array();
         
         for($i = 1;$i <= 7;$i++) {
             $dayOfTheWeekNonreccurringEventCreatedCount[$i] = 0;
@@ -137,14 +161,24 @@
             $dayOfTheWeekReccurringEventStartedCount[$i] = 0;
         }
         
-        getDayOfTheWeekEventCreated($dayOfTheWeekNonreccurringEventCreatedCount, $dayOfTheWeekNonreccurringEventStartedCount, $nonrecurringEvents, false);
-        getDayOfTheWeekEventCreated($dayOfTheWeekReccurringEventCreatedCount, $dayOfTheWeekReccurringEventStartedCount, $recurringEvents, true);
+        for($i = 1;$i <= 12;$i++) {
+            $monthOfTheYearNonreccurringEventCreatedCount[$i] = 0;
+            $monthOfTheYearReccurringEventCreatedCount[$i] = 0;
+        }
+        
+        getDayOfTheWeekEventCreated($dayOfTheWeekNonreccurringEventCreatedCount, $dayOfTheWeekNonreccurringEventStartedCount, $monthOfTheYearNonreccurringEventCreatedCount, $nonrecurringEvents, false);
+        getDayOfTheWeekEventCreated($dayOfTheWeekReccurringEventCreatedCount, $dayOfTheWeekReccurringEventStartedCount, $monthOfTheYearReccurringEventCreatedCount, $recurringEvents, true);
         
         for($i = 1;$i <= 7;$i++) {
             $dayOfTheWeekNonreccurringAndReccurringEventCreatedCount[$i] = $dayOfTheWeekNonreccurringEventCreatedCount[$i] +  $dayOfTheWeekReccurringEventCreatedCount[$i];
 
             $dayOfTheWeekNonreccurringAndReccurringEventStartedCount[$i] =   $dayOfTheWeekNonreccurringEventStartedCount[$i] +             $dayOfTheWeekReccurringEventStartedCount[$i];
         
+        }
+        
+        for($i = 1;$i <= 12;$i++) {
+            $monthOfTheYearNonreccurringAndReccurringEventCreatedCount[$i] = $monthOfTheYearNonreccurringEventCreatedCount[$i] +
+            $monthOfTheYearReccurringEventCreatedCount[$i];
         }
         
         $dayOfTheWeekNonreccurringEventCreatedCountSerialized = normalizeAndSerializeDayOfTheWeek($dayOfTheWeekNonreccurringEventCreatedCount);
@@ -154,6 +188,12 @@
         $dayOfTheWeekNonreccurringEventStartedCountSerialized = normalizeAndSerializeDayOfTheWeek($dayOfTheWeekNonreccurringEventStartedCount);
         $dayOfTheWeekReccurringEventStartedCountSerialized = normalizeAndSerializeDayOfTheWeek($dayOfTheWeekReccurringEventStartedCount);
         $dayOfTheWeekNonreccurringAndReccurringEventStartedCountSerialized = normalizeAndSerializeDayOfTheWeek($dayOfTheWeekNonreccurringAndReccurringEventStartedCount);
+        
+        
+        $monthOfTheYearNonreccurringEventCreatedCountSerialized = normalizeAndSerializeMonthOfTheYear($monthOfTheYearNonreccurringEventCreatedCount);
+        $monthOfTheYearReccurringEventCreatedCountSerialized = normalizeAndSerializeMonthOfTheYear($monthOfTheYearReccurringEventCreatedCount);
+        $monthOfTheYearNonreccurringAndReccurringEventCreatedCountSerialized = normalizeAndSerializeMonthOfTheYear($monthOfTheYearNonreccurringAndReccurringEventCreatedCount);
+        
         
         
         require('db/config.php');
@@ -182,10 +222,9 @@
             $stmt->bind_param('isiiis', $user_id, $data_analysis_type, $nonrecurring_included, $recurring_included, $count_or_length, $dayOfTheWeekNonreccurringAndReccurringEventCreatedCountSerialized);
             $stmt->execute();
             
-            ////////////////////////////////////////////////////////////////////
+            ////////////////////////////////////////////////////////////
             
             $data_analysis_type = "day_of_the_week_started";
-            $count_or_length = 0;            
             
             $nonrecurring_included = 1;
             $recurring_included = 0;
@@ -204,6 +243,32 @@
             
             $stmt->bind_param('isiiis', $user_id, $data_analysis_type, $nonrecurring_included, $recurring_included, $count_or_length, $dayOfTheWeekNonreccurringAndReccurringEventStartedCountSerialized);
             $stmt->execute();
+            
+            
+            $data_analysis_type = "month_of_the_year_created";
+            
+            $nonrecurring_included = 1;
+            $recurring_included = 0;
+            
+            $stmt->bind_param('isiiis', $user_id, $data_analysis_type, $nonrecurring_included, $recurring_included, $count_or_length, $monthOfTheYearNonreccurringEventCreatedCountSerialized);
+            $stmt->execute();
+            
+            $nonrecurring_included = 0;
+            $recurring_included = 1;
+            
+            $stmt->bind_param('isiiis', $user_id, $data_analysis_type, $nonrecurring_included, $recurring_included, $count_or_length, $monthOfTheYearReccurringEventCreatedCountSerialized);
+            $stmt->execute();
+            
+            $nonrecurring_included = 1;
+            $recurring_included = 1;
+            
+            $stmt->bind_param('isiiis', $user_id, $data_analysis_type, $nonrecurring_included, $recurring_included, $count_or_length, $monthOfTheYearNonreccurringAndReccurringEventCreatedCountSerialized);
+            $stmt->execute();
+            
+           
+            
+            
+            
             
             $stmt->close();
 

@@ -59,6 +59,7 @@
         <select id="data_analysis_type">
             <option value="data_analysis_type=day_of_the_week_created&">Day of the Week Created</option>
             <option value="data_analysis_type=day_of_the_week_started&">Day of the Week Started</option>
+            <option value="data_analysis_type=month_of_the_year_created&">Month of the Year Created</option>
         </select>
 
         <select id="event_type_included">
