@@ -13,7 +13,7 @@
       
     function drawChart() {
       var jsonData = $.ajax({
-          url: "dataAnalysisDayOfTheWeekCreated.php",
+          url: "getChartDataJSON.php?data_analysis_type=day_of_the_week_created&nonrecurring_included=1&recurring_included=0",
           dataType:"json",
           async: false
           }).responseText;
@@ -23,7 +23,7 @@
 
       // Instantiate and draw our chart, passing in some options.
       var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
-      chart.draw(data, {width: 900, height: 400, vAxis: {title: "Number of Events"}, hAxis: {title: "Day of the Week Created"} });
+      chart.draw(data, {width: 900, height: 400, vAxis: {title: "Number of Nonrecurring Events"}, hAxis: {title: "Day of the Week Created"} });
     }
 
     </script>

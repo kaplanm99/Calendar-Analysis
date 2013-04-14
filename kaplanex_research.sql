@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Mar 20, 2013 at 07:30 PM
+-- Generation Time: Apr 13, 2013 at 07:45 PM
 -- Server version: 5.5.30
 -- PHP Version: 5.2.17
 
@@ -19,6 +19,22 @@ SET time_zone = "+00:00";
 --
 -- Database: `kaplanex_research`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `data_analysis`
+--
+
+DROP TABLE IF EXISTS `data_analysis`;
+CREATE TABLE IF NOT EXISTS `data_analysis` (
+  `user_id` int(20) unsigned NOT NULL,
+  `data_analysis_type` varchar(200) NOT NULL,
+  `nonrecurring_included` tinyint(1) NOT NULL,
+  `recurring_included` tinyint(1) NOT NULL,
+  `array_serialized` varchar(10000) NOT NULL,
+  PRIMARY KEY (`user_id`,`data_analysis_type`,`nonrecurring_included`,`recurring_included`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -39,8 +55,9 @@ CREATE TABLE IF NOT EXISTS `event` (
   `google_recurring_event_id` varchar(200) NOT NULL,
   `recurring_event_id` int(100) NOT NULL,
   PRIMARY KEY (`event_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=4138 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=8675 ;
 
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `user`
@@ -51,7 +68,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `id` int(20) unsigned NOT NULL AUTO_INCREMENT,
   `ignore` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=15 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=25 ;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

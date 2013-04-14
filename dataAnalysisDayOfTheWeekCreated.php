@@ -83,7 +83,7 @@
             
         } else {
             foreach($events as $event) {
-                processEventForDayOfTheWeekEventCreated($dayOfTheWeekEventCreated, $date['dtstart'], $date['dtend'], $event["google_created"]);
+                processEventForDayOfTheWeekEventCreated($dayOfTheWeekEventCreated, $event["google_start"], $event["google_end"], $event["google_created"]);
             }
         }
 
@@ -93,32 +93,99 @@
     
     $users = array();
     
-    $dayOfTheWeekEventCreated = array();
-    
     $user_ids = getUserIds();
-    
-    $usersWithEventsCount = 0;
-    
-    print('{ "cols": [ 
-        {"id":"","label":"Day of the Week","pattern":"","type":"string"},');
-    
     
     foreach($user_ids as $user_id) {    
     
         $nonrecurringEvents = getEventsByUser(false,$user_id);
         $recurringEvents = getEventsByUser(true,$user_id);
             
-        $dayOfTheWeekEventCreated[$user_id] = array();    
-            
+        $dayOfTheWeekNonreccurringEventCreated = array();
+        $dayOfTheWeekReccurringEventCreated = array();        
+        $dayOfTheWeekNonreccurringAndReccurringEventCreated = array();
+        
         for($i = 1;$i <= 7;$i++) {
-            $dayOfTheWeekEventCreated[$user_id][$i] = 0;
+            $dayOfTheWeekNonreccurringEventCreated[$i] = 0;
+            $dayOfTheWeekReccurringEventCreated[$i] = 0;            
         }
         
-        getDayOfTheWeekEventCreated($dayOfTheWeekEventCreated[$user_id], $nonrecurringEvents, false);
-        getDayOfTheWeekEventCreated($dayOfTheWeekEventCreated[$user_id], $recurringEvents, true);
+        getDayOfTheWeekEventCreated($dayOfTheWeekNonreccurringEventCreated, $nonrecurringEvents, false);
+        getDayOfTheWeekEventCreated($dayOfTheWeekReccurringEventCreated, $recurringEvents, true);
         
+        for($i = 1;$i <= 7;$i++) {
+            $dayOfTheWeekNonreccurringAndReccurringEventCreated[$i] = $dayOfTheWeekNonreccurringEventCreated[$i] +  $dayOfTheWeekReccurringEventCreated[$i];            
+        }
+        
+        
+        $dayOfTheWeekNonreccurringEventCreatedSum = 0;
+        $dayOfTheWeekReccurringEventCreatedSum = 0;
+        $dayOfTheWeekNonreccurringAndReccurringEventCreatedSum = 0;
+        
+        for($i = 1;$i <= 7;$i++) {
+            $dayOfTheWeekNonreccurringEventCreatedSum += $dayOfTheWeekNonreccurringEventCreated[$i];
+            $dayOfTheWeekReccurringEventCreatedSum += $dayOfTheWeekReccurringEventCreated[$i];
+            $dayOfTheWeekNonreccurringAndReccurringEventCreatedSum += $dayOfTheWeekNonreccurringAndReccurringEventCreated[$i];         
+        }
+        
+        for($i = 1;$i <= 7;$i++) {
+            $dayOfTheWeekNonreccurringEventCreated[$i] /= $dayOfTheWeekNonreccurringEventCreatedSum;
+            $dayOfTheWeekReccurringEventCreated[$i] /= $dayOfTheWeekReccurringEventCreatedSum;
+            $dayOfTheWeekNonreccurringAndReccurringEventCreated[$i] /=$dayOfTheWeekNonreccurringAndReccurringEventCreatedSum;         
+        }
+        
+        // serialize 1 per user and with and without recurrence and both
+        $dayOfTheWeekNonreccurringEventCreatedSerialized = serialize($dayOfTheWeekNonreccurringEventCreated);
+        
+        $dayOfTheWeekReccurringEventCreatedSerialized = serialize($dayOfTheWeekReccurringEventCreated);
+        
+        $dayOfTheWeekNonreccurringAndReccurringEventCreatedSerialized = serialize($dayOfTheWeekNonreccurringAndReccurringEventCreated);
+        
+        
+        //print($dayOfTheWeekNonreccurringEventCreatedSerialized . "<br>");
+        //print($dayOfTheWeekReccurringEventCreatedSerialized . "<br>");
+        
+        
+        require('db/config.php');
+        $mysqli = new mysqli($host, $username, $password, $db);
+        if ($stmt = $mysqli->prepare("INSERT INTO `data_analysis` (`user_id`, `data_analysis_type`, `nonrecurring_included`, `recurring_included`, `array_serialized`) VALUES (?,?,?,?,?);")){
+            
+            $user_id = intval($user_id);
+            $data_analysis_type = "day_of_the_week_created";
+            
+            $nonrecurring_included = 1;
+            $recurring_included = 0;
+            
+            $stmt->bind_param('isiis', $user_id, $data_analysis_type, $nonrecurring_included, $recurring_included, $dayOfTheWeekNonreccurringEventCreatedSerialized);
+            $stmt->execute();
+            
+            $nonrecurring_included = 0;
+            $recurring_included = 1;
+            
+            $stmt->bind_param('isiis', $user_id, $data_analysis_type, $nonrecurring_included, $recurring_included, $dayOfTheWeekReccurringEventCreatedSerialized);
+            $stmt->execute();
+            
+            $nonrecurring_included = 1;
+            $recurring_included = 1;
+            
+            $stmt->bind_param('isiis', $user_id, $data_analysis_type, $nonrecurring_included, $recurring_included, $dayOfTheWeekNonreccurringAndReccurringEventCreatedSerialized);
+            $stmt->execute();
+            
+            $stmt->close();
+
+        }
+           
+        $mysqli->close();
+        
+        //$dayOfTheWeekEventCreatedUnserialized = unserialize($dayOfTheWeekEventCreatedSerialized);
+        
+        //print_r($dayOfTheWeekEventCreatedUnserialized);
+    }
+    
+    /*
+    print('{ "cols": [ {"id":"","label":"Day of the Week","pattern":"","type":"string"},');
+    
+    foreach($user_ids as $user_id) {        
         print('{"id":"","label":"'.$user_id.'","pattern":"","type":"number"},');
-        
     }
     
     print(' ], "rows": [ ');
@@ -145,4 +212,5 @@
     }
     
     print(']}');
+    */
 ?>
