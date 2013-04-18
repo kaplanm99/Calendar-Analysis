@@ -72,66 +72,6 @@
         return $monthOfTheYearSerialized;
     }
     
-    function getDayOfTheWeekEventCreated(&$dayOfTheWeekEventCreatedCount, &$dayOfTheWeekEventStartedCount, &$monthOfTheYearEventCreatedCount, $events, $recurring) {
-
-        if($recurring) {
-            
-            foreach($events as $event) {  
-            
-                $google_recurrence_unserialized = unserialize($event["google_recurrence"]);
-                    
-                //print_r($google_recurrence_unserialized);
-                
-                $format = "Ymd\THis";
-
-                $startDT = new DateTime($event["google_start"]);
-                $dtStart = $startDT->format($format);
-                
-                $endDT = new DateTime($event["google_end"]);
-                $dtEnd = $endDT->format($format);
-                
-                //print($dtStart . " , " . $dtEnd . "<br/>");  
-                
-                $rRule = substr($google_recurrence_unserialized[0],6);
-                
-                //print($rRule . "<br/>");
-                
-                // replace tzid with the event's Timezone need to access and store that value (add to IRB)
-                
-                $options = array(
-                  'dtstart' => $dtStart,
-                  'dtend'   => $dtEnd,
-                  'tzid'    => 'America/New_York',
-                  'rrule'   => $rRule
-                );
-
-                $recurrence = new recurrence($options);
-                $recurrence->format = 'Y-m-d\TH:i:sP';
-
-                $z = 0;
-                
-                while($date = $recurrence->next()) {
-                    
-                    processEventForDayOfTheWeekEventCreated($dayOfTheWeekEventCreatedCount,$dayOfTheWeekEventStartedCount,
-                    $monthOfTheYearEventCreatedCount,                    $date['dtstart'], $date['dtend'], $event["google_created"]);
-                    
-                    $z++;
-                    
-                    if($z > 160) break;              
-                }
-            
-            }
-            
-        } else {
-            foreach($events as $event) {
-                processEventForDayOfTheWeekEventCreated($dayOfTheWeekEventCreatedCount, $dayOfTheWeekEventStartedCount, $monthOfTheYearEventCreatedCount, $event["google_start"], $event["google_end"], $event["google_created"]);
-            }
-        }
-
-            
-    }
-    
-    
     $users = array();
     
     $user_ids = getUserIds();
@@ -166,8 +106,13 @@
             $monthOfTheYearReccurringEventCreatedCount[$i] = 0;
         }
         
-        getDayOfTheWeekEventCreated($dayOfTheWeekNonreccurringEventCreatedCount, $dayOfTheWeekNonreccurringEventStartedCount, $monthOfTheYearNonreccurringEventCreatedCount, $nonrecurringEvents, false);
-        getDayOfTheWeekEventCreated($dayOfTheWeekReccurringEventCreatedCount, $dayOfTheWeekReccurringEventStartedCount, $monthOfTheYearReccurringEventCreatedCount, $recurringEvents, true);
+        foreach($nonrecurringEvents as $event) {
+            processEventForDayOfTheWeekEventCreated($dayOfTheWeekNonreccurringEventCreatedCount, $dayOfTheWeekNonreccurringEventStartedCount, $monthOfTheYearNonreccurringEventCreatedCount, $event["google_start"], $event["google_end"], $event["google_created"]);
+        }
+        
+        foreach($recurringEvents as $event) {
+            processEventForDayOfTheWeekEventCreated($dayOfTheWeekReccurringEventCreatedCount, $dayOfTheWeekReccurringEventStartedCount, $monthOfTheYearReccurringEventCreatedCount, $event["google_start"], $event["google_end"], $event["google_created"]);
+        }
         
         for($i = 1;$i <= 7;$i++) {
             $dayOfTheWeekNonreccurringAndReccurringEventCreatedCount[$i] = $dayOfTheWeekNonreccurringEventCreatedCount[$i] +  $dayOfTheWeekReccurringEventCreatedCount[$i];

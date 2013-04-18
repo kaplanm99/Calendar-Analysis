@@ -75,9 +75,57 @@ function getEventsByUser($recurring, $user_id) {
         $stmt->bind_result($user_id, $google_created, $google_start, $google_end, $google_recurrence);
             
         while($stmt->fetch()) {
-            $event = array('user_id' => $user_id, 'google_created' => $google_created, 'google_start' => $google_start, 'google_end' => $google_end, 'google_recurrence' => $google_recurrence);
+            
+            if($recurring){
+            
+                $google_recurrence_unserialized = unserialize($google_recurrence);
                     
-            $eventsByUser[] = $event;            
+                //print_r($google_recurrence_unserialized);
+                
+                $format = "Ymd\THis";
+
+                $startDT = new DateTime($google_start);
+                $dtStart = $startDT->format($format);
+                
+                $endDT = new DateTime($google_end);
+                $dtEnd = $endDT->format($format);
+                
+                //print($dtStart . " , " . $dtEnd . "<br/>");  
+                
+                $rRule = substr($google_recurrence_unserialized[0],6);
+                
+                //print($rRule . "<br/>");
+                
+                // replace tzid with the event's Timezone need to access and store that value (add to IRB)
+                
+                $options = array(
+                  'dtstart' => $dtStart,
+                  'dtend'   => $dtEnd,
+                  'tzid'    => 'America/New_York',
+                  'rrule'   => $rRule
+                );
+
+                $recurrence = new recurrence($options);
+                $recurrence->format = 'Y-m-d\TH:i:sP';
+
+                $z = 0;
+                
+                while($date = $recurrence->next()) {
+                    
+                    $event = array('user_id' => $user_id, 'google_created' => $google_created, 'google_start' => $date['dtstart'], 'google_end' => $date['dtend']);
+                    
+                    $eventsByUser[] = $event;
+                    
+                    $z++;
+                    
+                    if($z > 160) break;              
+                }
+            
+            } else {            
+                $event = array('user_id' => $user_id, 'google_created' => $google_created, 'google_start' => $google_start, 'google_end' => $google_end);
+                
+                $eventsByUser[] = $event;            
+            }
         }
      
         $stmt->close();
