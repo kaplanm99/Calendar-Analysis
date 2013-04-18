@@ -5,16 +5,83 @@
     <script type="text/javascript" src="http://code.jquery.com/jquery-1.8.3.js"></script>
     <script type="text/javascript">
     
-    var data_analysis_type = "data_analysis_type=day_of_the_week_created&";
-    var data_analysis_type_text = "Day of the Week Created";
+    var data_analysis_type = "data_analysis_type=relative_percentage_sums&";
+    var data_analysis_type_text = "Relative Percentage Sums";
     
     var event_type_included = "nonrecurring_included=1&recurring_included=0&";
     var event_type_included_text = "Number of " + "Nonrecurring Events";
     
     // Load the Visualization API and the piechart package.
-    google.load('visualization', '1', {'packages':['corechart']});
+    google.load('visualization', '1.1', {packages: ['corechart', 'controls']});
     
     $(document).ready(function(){
+        
+      function drawVisualization() {
+        var dashboard = new google.visualization.Dashboard(
+             document.getElementById('dashboard'));
+      
+         var control = new google.visualization.ControlWrapper({
+           'controlType': 'ChartRangeFilter',
+           'containerId': 'control',
+           'options': {
+             // Filter by the date axis.
+             'filterColumnIndex': 0,
+             'ui': {
+               'chartType': 'LineChart',
+               'chartOptions': {
+                 'chartArea': {'width': '80%'},
+                 'hAxis': {'baselineColor': 'none'}
+               },
+               // Display a single series that shows the closing value of the stock.
+               // Thus, this view has two columns: the date (axis) and the stock value (line series).
+               /*
+               'chartView': {
+                 'columns': [1, 3]
+               },
+               */
+               // 1 day in milliseconds = 24 * 60 * 60 * 1000 = 86,400,000
+               //'minRangeSize': 86400000
+             }
+           }
+         });
+      
+         var chart = new google.visualization.ChartWrapper({
+           'chartType': 'LineChart',
+           'containerId': 'chart',
+           'options': {
+             // Use the same chart area width as the control for axis alignment.
+             'chartArea': {'height': '70%', 'width': '80%'},
+             'hAxis': {'title': data_analysis_type_text},
+             'vAxis': {'title': event_type_included_text},
+           }
+         });
+         
+         var jsonData = $.ajax({
+              url: ("getChartDataJSON.php?"+data_analysis_type+event_type_included),
+              dataType:"json",
+              async: false
+              }).responseText;
+              
+          // Create our data table out of JSON data loaded from server.
+          var data = new google.visualization.DataTable(jsonData);
+      
+         
+         dashboard.bind(control, chart);
+         dashboard.draw(data);
+      }
+      
+
+      google.setOnLoadCallback(drawVisualization);
+        
+        
+        
+        
+        
+        
+        
+        ////////////////////////////////////////////////////
+        
+        /*
         // Set a callback to run when the Google Visualization API is loaded.
         google.setOnLoadCallback(drawChart);
         
@@ -32,6 +99,7 @@
           var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
           chart.draw(data, {width: 900, height: 400, vAxis: {title: event_type_included_text }, hAxis: {title: data_analysis_type_text} });
         }
+        */
         
         $("#data_analysis_type").change(function() {
           data_analysis_type = $("#data_analysis_type").val();
@@ -39,7 +107,7 @@
             data_analysis_type_text = $(this).text();
           });
           
-          drawChart();
+          drawVisualization();
         });
         
         $("#event_type_included").change(function() {
@@ -48,7 +116,7 @@
             event_type_included_text = "Number of " + $(this).text();
           });
           
-          drawChart();
+          drawVisualization();
         });
     });
     </script>
@@ -57,9 +125,6 @@
   <body>
     <form>
         <select id="data_analysis_type">
-            <option value="data_analysis_type=day_of_the_week_created&">Day of the Week Created</option>
-            <option value="data_analysis_type=day_of_the_week_started&">Day of the Week Started</option>
-            <option value="data_analysis_type=month_of_the_year_created&">Month of the Year Created</option>
             <option value="data_analysis_type=relative_percentage_sums&">Relative Percentage Sums</option>
         </select>
 
@@ -77,6 +142,10 @@
     </form>
     
     <!--Div that will hold the pie chart-->
-    <div id="chart_div"></div>
+    <div id="dashboard">
+        <div id="chart" style='width: 915px; height: 300px;'></div>
+        <div id="control" style='width: 915px; height: 50px;'></div>
+    </div>
+    
   </body>
 </html>

@@ -4,7 +4,7 @@
     require('getEvents.php');
     require('getEventsPerDay.php');
     
-    function processEventForDayOfTheWeekEventCreated(&$dayOfTheWeekEventCreatedCount, &$dayOfTheWeekEventStartedCount, &$monthOfTheYearEventCreatedCount, $google_start, $google_end, $google_created) {
+    function processEventForDayOfTheWeekEventCreated(&$dayOfTheWeekEventCreatedCount, &$dayOfTheWeekEventStartedCount, &$monthOfTheYearEventCreatedCount, &$eventsPerDay, &$maxTimeDifferenceInDays, $google_start, $google_end, $google_created) {
         $startUnixTimestamp = strtotime($google_start);
         $endUnixTimestamp = strtotime($google_end);
         $createdUnixTimestamp = strtotime($google_created);    
@@ -35,115 +35,168 @@
                 $google_start_DayOfTheWeek = $google_startDT->format($dayFormat);
                     
                 $dayOfTheWeekEventStartedCount[$google_start_DayOfTheWeek]++;
-                    
+                
+
+                if(! array_key_exists($dtstartInDays, $eventsPerDay) ) {
+                    $eventsPerDay[$dtstartInDays] = array();
+                }
+                
+                $eventsPerDay[$dtstartInDays][] = $timeDifferenceInDays;
+                
+                if($timeDifferenceInDays > $maxTimeDifferenceInDays) {
+                    $maxTimeDifferenceInDays = $timeDifferenceInDays;
+                }
             }
         }
     }
     
-    function normalizeAndSerializeDayOfTheWeek(&$dayOfTheWeek) {
-        $dayOfTheWeekSum = 0;
+    function normalizeAndSerializeInput(&$input) {
+        $inputSum = 0;
         
-        for($i = 1;$i <= 7;$i++) {
-            $dayOfTheWeekSum += $dayOfTheWeek[$i];         
+        for($i = 1;$i <= count($input);$i++) {
+            $inputSum += $input[$i];         
         }
         
-        for($i = 1;$i <= 7;$i++) {
-            $dayOfTheWeek[$i] /= $dayOfTheWeekSum;        
+        for($i = 1;$i <= count($input);$i++) {
+            $input[$i] /= $inputSum;        
         }
         
-        $dayOfTheWeekSerialized = serialize($dayOfTheWeek);
+        $inputSerialized = serialize($input);
         
-        return $dayOfTheWeekSerialized;
+        return $inputSerialized;
     }
     
-    function normalizeAndSerializeMonthOfTheYear(&$monthOfTheYear) {
-        $monthOfTheYearSum = 0;
+    function calculateRelativePercentageSumsNormalizedAndSerialized(&$eventsPerDay, &$maxTimeDifferenceInDays){
+        $relativePercentageSums = array();
+        $numOfDaysWithEvents = 0;
+
+        calculateRelativePercentageSums($relativePercentageSums, $numOfDaysWithEvents, $eventsPerDay, $maxTimeDifferenceInDays);
+
+        $relativePercentageSumsNormalized = array();
         
-        for($i = 1;$i <= 12;$i++) {
-            $monthOfTheYearSum += $monthOfTheYear[$i];         
+        for($i = 0;$i < $maxTimeDifferenceInDays;$i++) {    
+            $relativePercentageSumsNormalized[$i] = $relativePercentageSums[$i]/$numOfDaysWithEvents;
         }
         
-        for($i = 1;$i <= 12;$i++) {
-            $monthOfTheYear[$i] /= $monthOfTheYearSum;        
-        }
+        $relativePercentageSumsSerialized = serialize($relativePercentageSumsNormalized);
         
-        $monthOfTheYearSerialized = serialize($monthOfTheYear);
-        
-        return $monthOfTheYearSerialized;
+        return $relativePercentageSumsSerialized;
     }
     
     $users = array();
     
     $user_ids = getUserIds();
     
-    foreach($user_ids as $user_id) {    
-    
-        $nonrecurringEvents = getEventsByUser(false,$user_id);
-        $recurringEvents = getEventsByUser(true,$user_id);
+    require('db/config.php');
+    $mysqli = new mysqli($host, $username, $password, $db);
+    if ($stmt = $mysqli->prepare("INSERT INTO `data_analysis` (`user_id`, `data_analysis_type`, `nonrecurring_included`, `recurring_included`, `count_or_length`, `array_serialized`) VALUES (?,?,?,?,?,?);")){
             
-        $dayOfTheWeekNonreccurringEventCreatedCount = array();
-        $dayOfTheWeekReccurringEventCreatedCount = array();        
-        $dayOfTheWeekNonreccurringAndReccurringEventCreatedCount = array();
         
-        $dayOfTheWeekNonreccurringEventStartedCount = array();
-        $dayOfTheWeekReccurringEventStartedCount = array();        
-        $dayOfTheWeekNonreccurringAndReccurringEventStartedCount = array();
-        
-        $monthOfTheYearNonreccurringEventCreatedCount = array();
-        $monthOfTheYearReccurringEventCreatedCount = array();        
-        $monthOfTheYearNonreccurringAndReccurringEventCreatedCount = array();
-        
-        for($i = 1;$i <= 7;$i++) {
-            $dayOfTheWeekNonreccurringEventCreatedCount[$i] = 0;
-            $dayOfTheWeekReccurringEventCreatedCount[$i] = 0;    
+    
+        foreach($user_ids as $user_id) {    
+    
+            $nonrecurringEvents = getEventsByUser(false,$user_id);
+            $recurringEvents = getEventsByUser(true,$user_id);
+                
+            $dayOfTheWeekNonreccurringEventCreatedCount = array();
+            $dayOfTheWeekReccurringEventCreatedCount = array();        
+            $dayOfTheWeekNonreccurringAndReccurringEventCreatedCount = array();
+            
+            $dayOfTheWeekNonreccurringEventStartedCount = array();
+            $dayOfTheWeekReccurringEventStartedCount = array();        
+            $dayOfTheWeekNonreccurringAndReccurringEventStartedCount = array();
+            
+            $monthOfTheYearNonreccurringEventCreatedCount = array();
+            $monthOfTheYearReccurringEventCreatedCount = array();        
+            $monthOfTheYearNonreccurringAndReccurringEventCreatedCount = array();
+            
+            for($i = 1;$i <= 7;$i++) {
+                $dayOfTheWeekNonreccurringEventCreatedCount[$i] = 0;
+                $dayOfTheWeekReccurringEventCreatedCount[$i] = 0;    
 
-            $dayOfTheWeekNonreccurringEventStartedCount[$i] = 0;
-            $dayOfTheWeekReccurringEventStartedCount[$i] = 0;
-        }
-        
-        for($i = 1;$i <= 12;$i++) {
-            $monthOfTheYearNonreccurringEventCreatedCount[$i] = 0;
-            $monthOfTheYearReccurringEventCreatedCount[$i] = 0;
-        }
-        
-        foreach($nonrecurringEvents as $event) {
-            processEventForDayOfTheWeekEventCreated($dayOfTheWeekNonreccurringEventCreatedCount, $dayOfTheWeekNonreccurringEventStartedCount, $monthOfTheYearNonreccurringEventCreatedCount, $event["google_start"], $event["google_end"], $event["google_created"]);
-        }
-        
-        foreach($recurringEvents as $event) {
-            processEventForDayOfTheWeekEventCreated($dayOfTheWeekReccurringEventCreatedCount, $dayOfTheWeekReccurringEventStartedCount, $monthOfTheYearReccurringEventCreatedCount, $event["google_start"], $event["google_end"], $event["google_created"]);
-        }
-        
-        for($i = 1;$i <= 7;$i++) {
-            $dayOfTheWeekNonreccurringAndReccurringEventCreatedCount[$i] = $dayOfTheWeekNonreccurringEventCreatedCount[$i] +  $dayOfTheWeekReccurringEventCreatedCount[$i];
+                $dayOfTheWeekNonreccurringEventStartedCount[$i] = 0;
+                $dayOfTheWeekReccurringEventStartedCount[$i] = 0;
+            }
+            
+            for($i = 1;$i <= 12;$i++) {
+                $monthOfTheYearNonreccurringEventCreatedCount[$i] = 0;
+                $monthOfTheYearReccurringEventCreatedCount[$i] = 0;
+            }
+            
+            $eventsPerDay = array();
+            $maxTimeDifferenceInDays = 0;
 
-            $dayOfTheWeekNonreccurringAndReccurringEventStartedCount[$i] =   $dayOfTheWeekNonreccurringEventStartedCount[$i] +             $dayOfTheWeekReccurringEventStartedCount[$i];
-        
-        }
-        
-        for($i = 1;$i <= 12;$i++) {
-            $monthOfTheYearNonreccurringAndReccurringEventCreatedCount[$i] = $monthOfTheYearNonreccurringEventCreatedCount[$i] +
-            $monthOfTheYearReccurringEventCreatedCount[$i];
-        }
-        
-        $dayOfTheWeekNonreccurringEventCreatedCountSerialized = normalizeAndSerializeDayOfTheWeek($dayOfTheWeekNonreccurringEventCreatedCount);
-        $dayOfTheWeekReccurringEventCreatedCountSerialized = normalizeAndSerializeDayOfTheWeek($dayOfTheWeekReccurringEventCreatedCount);
-        $dayOfTheWeekNonreccurringAndReccurringEventCreatedCountSerialized = normalizeAndSerializeDayOfTheWeek($dayOfTheWeekNonreccurringAndReccurringEventCreatedCount);
-        
-        $dayOfTheWeekNonreccurringEventStartedCountSerialized = normalizeAndSerializeDayOfTheWeek($dayOfTheWeekNonreccurringEventStartedCount);
-        $dayOfTheWeekReccurringEventStartedCountSerialized = normalizeAndSerializeDayOfTheWeek($dayOfTheWeekReccurringEventStartedCount);
-        $dayOfTheWeekNonreccurringAndReccurringEventStartedCountSerialized = normalizeAndSerializeDayOfTheWeek($dayOfTheWeekNonreccurringAndReccurringEventStartedCount);
-        
-        
-        $monthOfTheYearNonreccurringEventCreatedCountSerialized = normalizeAndSerializeMonthOfTheYear($monthOfTheYearNonreccurringEventCreatedCount);
-        $monthOfTheYearReccurringEventCreatedCountSerialized = normalizeAndSerializeMonthOfTheYear($monthOfTheYearReccurringEventCreatedCount);
-        $monthOfTheYearNonreccurringAndReccurringEventCreatedCountSerialized = normalizeAndSerializeMonthOfTheYear($monthOfTheYearNonreccurringAndReccurringEventCreatedCount);
-        
-        
-        
-        require('db/config.php');
-        $mysqli = new mysqli($host, $username, $password, $db);
-        if ($stmt = $mysqli->prepare("INSERT INTO `data_analysis` (`user_id`, `data_analysis_type`, `nonrecurring_included`, `recurring_included`, `count_or_length`, `array_serialized`) VALUES (?,?,?,?,?,?);")){
+            $eventsPerDayR = array();
+            $maxTimeDifferenceInDaysR = 0;
+            
+            $eventsPerDayNAndR = array();
+            $maxTimeDifferenceInDaysNAndR = 0;
+            
+            foreach($nonrecurringEvents as $event) {
+                processEventForDayOfTheWeekEventCreated($dayOfTheWeekNonreccurringEventCreatedCount, $dayOfTheWeekNonreccurringEventStartedCount, $monthOfTheYearNonreccurringEventCreatedCount, 
+                $eventsPerDay, $maxTimeDifferenceInDays, $event["google_start"], $event["google_end"], $event["google_created"]);
+            }
+            
+            foreach($recurringEvents as $event) {
+                processEventForDayOfTheWeekEventCreated($dayOfTheWeekReccurringEventCreatedCount, $dayOfTheWeekReccurringEventStartedCount, $monthOfTheYearReccurringEventCreatedCount,
+                $eventsPerDayR, $maxTimeDifferenceInDaysR,
+                $event["google_start"], $event["google_end"], $event["google_created"]);
+            }
+            
+            for($i = 1;$i <= 7;$i++) {
+                $dayOfTheWeekNonreccurringAndReccurringEventCreatedCount[$i] = $dayOfTheWeekNonreccurringEventCreatedCount[$i] +  $dayOfTheWeekReccurringEventCreatedCount[$i];
+
+                $dayOfTheWeekNonreccurringAndReccurringEventStartedCount[$i] =   $dayOfTheWeekNonreccurringEventStartedCount[$i] +             $dayOfTheWeekReccurringEventStartedCount[$i];
+            
+            }
+            
+            for($i = 1;$i <= 12;$i++) {
+                $monthOfTheYearNonreccurringAndReccurringEventCreatedCount[$i] = $monthOfTheYearNonreccurringEventCreatedCount[$i] +
+                $monthOfTheYearReccurringEventCreatedCount[$i];
+            }
+            
+            $eventsPerDayNAndR = array();
+            
+            foreach($eventsPerDay as $dtstartInDays => $eventsThatDay) {
+                foreach($eventsThatDay as $eventThatDay) {
+                    $eventsPerDayNAndR[$dtstartInDays][] = $eventThatDay;
+                }
+            }
+            
+            foreach($eventsPerDayR as $dtstartInDays => $eventsThatDay) {
+                foreach($eventsThatDay as $eventThatDay) {
+                    $eventsPerDayNAndR[$dtstartInDays][] = $eventThatDay;
+                }
+            }
+            
+            if($maxTimeDifferenceInDays > $maxTimeDifferenceInDaysR) {
+                $maxTimeDifferenceInDaysNAndR = $maxTimeDifferenceInDays;
+            } else {
+                $maxTimeDifferenceInDaysNAndR = $maxTimeDifferenceInDaysR;
+            }
+            
+            
+            $relativePercentageSumsSerialized = calculateRelativePercentageSumsNormalizedAndSerialized($eventsPerDay, $maxTimeDifferenceInDays);
+            
+            $relativePercentageSumsRSerialized = calculateRelativePercentageSumsNormalizedAndSerialized($eventsPerDayR, $maxTimeDifferenceInDaysR);
+
+            $relativePercentageSumsNAndRSerialized = calculateRelativePercentageSumsNormalizedAndSerialized($eventsPerDayNAndR, $maxTimeDifferenceInDaysNAndR);
+            
+            
+            $dayOfTheWeekNonreccurringEventCreatedCountSerialized = normalizeAndSerializeInput($dayOfTheWeekNonreccurringEventCreatedCount);
+            $dayOfTheWeekReccurringEventCreatedCountSerialized = normalizeAndSerializeInput($dayOfTheWeekReccurringEventCreatedCount);
+            $dayOfTheWeekNonreccurringAndReccurringEventCreatedCountSerialized = normalizeAndSerializeInput($dayOfTheWeekNonreccurringAndReccurringEventCreatedCount);
+            
+            $dayOfTheWeekNonreccurringEventStartedCountSerialized = normalizeAndSerializeInput($dayOfTheWeekNonreccurringEventStartedCount);
+            $dayOfTheWeekReccurringEventStartedCountSerialized = normalizeAndSerializeInput($dayOfTheWeekReccurringEventStartedCount);
+            $dayOfTheWeekNonreccurringAndReccurringEventStartedCountSerialized = normalizeAndSerializeInput($dayOfTheWeekNonreccurringAndReccurringEventStartedCount);
+            
+            
+            $monthOfTheYearNonreccurringEventCreatedCountSerialized = normalizeAndSerializeInput($monthOfTheYearNonreccurringEventCreatedCount);
+            $monthOfTheYearReccurringEventCreatedCountSerialized = normalizeAndSerializeInput($monthOfTheYearReccurringEventCreatedCount);
+            $monthOfTheYearNonreccurringAndReccurringEventCreatedCountSerialized = normalizeAndSerializeInput($monthOfTheYearNonreccurringAndReccurringEventCreatedCount);
+            
+            
             
             $user_id = intval($user_id);
             $data_analysis_type = "day_of_the_week_created";
@@ -210,20 +263,31 @@
             $stmt->bind_param('isiiis', $user_id, $data_analysis_type, $nonrecurring_included, $recurring_included, $count_or_length, $monthOfTheYearNonreccurringAndReccurringEventCreatedCountSerialized);
             $stmt->execute();
             
+            $data_analysis_type = "relative_percentage_sums";
+            
+            $nonrecurring_included = 1;
+            $recurring_included = 0;
+            
+            $stmt->bind_param('isiiis', $user_id, $data_analysis_type, $nonrecurring_included, $recurring_included, $count_or_length, $relativePercentageSumsSerialized);
+            $stmt->execute();
            
+            $nonrecurring_included = 0;
+            $recurring_included = 1;
             
+            $stmt->bind_param('isiiis', $user_id, $data_analysis_type, $nonrecurring_included, $recurring_included, $count_or_length, $relativePercentageSumsRSerialized);
+            $stmt->execute();
             
+            $nonrecurring_included = 1;
+            $recurring_included = 1;
             
-            
-            $stmt->close();
-
+            $stmt->bind_param('isiiis', $user_id, $data_analysis_type, $nonrecurring_included, $recurring_included, $count_or_length, $relativePercentageSumsNAndRSerialized);
+            $stmt->execute();
+           
         }
-           
-        $mysqli->close();
         
-        //$dayOfTheWeekEventCreatedUnserialized = unserialize($dayOfTheWeekEventCreatedSerialized);
-        
-        //print_r($dayOfTheWeekEventCreatedUnserialized);
+        $stmt->close();
+
     }
-    
+           
+    $mysqli->close();
 ?>

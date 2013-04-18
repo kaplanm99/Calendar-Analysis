@@ -36,16 +36,16 @@
         
         
         
-        
-        print('{ "cols": [ {"id":"","label":"'.$data_analysis_type.'","pattern":"","type":"string"},');
-        
-        foreach($data as $user_id => $array_unserialized) {        
-            print('{"id":"","label":"User '.$user_id.'","pattern":"","type":"number"},');
-        }
-        
-        print(' ], "rows": [ ');
-        
         if($data_analysis_type == "day_of_the_week_created" || $data_analysis_type == "day_of_the_week_started") { 
+            print('{ "cols": [ {"id":"","label":"'.$data_analysis_type.'","pattern":"","type":"string"},');
+        
+            foreach($data as $user_id => $array_unserialized) {        
+                print('{"id":"","label":"User '.$user_id.'","pattern":"","type":"number"},');
+            }
+            
+            print(' ], "rows": [ ');
+            
+        
             $daysOfTheWeek = array();
             $daysOfTheWeek[1] = "Monday";
             $daysOfTheWeek[2] = "Tuesday";
@@ -69,6 +69,15 @@
         }
         
         if($data_analysis_type == "month_of_the_year_created") { 
+            print('{ "cols": [ {"id":"","label":"'.$data_analysis_type.'","pattern":"","type":"string"},');
+        
+            foreach($data as $user_id => $array_unserialized) {        
+                print('{"id":"","label":"User '.$user_id.'","pattern":"","type":"number"},');
+            }
+            
+            print(' ], "rows": [ ');
+            
+            
             $monthsOfTheYear = array();
             $monthsOfTheYear[1] = "January";
             $monthsOfTheYear[2] = "Febuary";
@@ -95,6 +104,39 @@
                 
             }
         }
+        
+        if($data_analysis_type == "relative_percentage_sums") { 
+            print('{ "cols": [ {"id":"'.$data_analysis_type.'","label":"'.$data_analysis_type.'","pattern":"","type":"number"},');
+        
+            foreach($data as $user_id => $array_unserialized) {        
+                print('{"id":"User '.$user_id.'","label":"User '.$user_id.'","pattern":"","type":"number"},');
+            }
+            
+            print(' ], "rows": [ ');
+            
+                
+            $maxTimeDifferenceInDays = 0;
+            
+            foreach($data as $user_id => $array_unserialized) {            
+                if( count($array_unserialized) > $maxTimeDifferenceInDays) {
+                    $maxTimeDifferenceInDays = count($array_unserialized);
+                }
+            }
+            
+            for($i = 0;$i <= $maxTimeDifferenceInDays;$i++) {
+                
+                print('{"c":[{"v":"'.$i.'"},');
+                
+                foreach($data as $user_id => $array_unserialized) { 
+                    print('{"v":'.floatval($array_unserialized[$i]).'},');
+                }
+                
+                print(']},');
+                
+            }
+        }
+        
+        
         
         print(']}');
     }
