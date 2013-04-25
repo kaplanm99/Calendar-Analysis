@@ -20,6 +20,7 @@
         return ($startUnixTimestamp < strtotime("now") && $startUnixTimestamp > 0 && $createdUnixTimestamp > 0 && $eventLengthInSeconds > 0 && $eventLengthInHours < 24 && $timeDifferenceInDays >= 0);
     
     }
+    
     /*
     function processEventForDayOfTheWeekEventCreated(&$dayOfTheWeekEventCreatedCount, &$dayOfTheWeekEventStartedCount, &$monthOfTheYearEventCreatedCount, &$eventsPerDay, &$maxTimeDifferenceInDays, $google_start, $google_end, $google_created) {
         $startUnixTimestamp = strtotime($google_start);
@@ -170,18 +171,28 @@
             $nonrecurringEvents = getEventsByUser(false,$user_id);
             $recurringEvents = getEventsByUser(true,$user_id);
             
-            $processEventForDayOfTheWeekEventCreated = 
-                function (&$data, $google_start, $google_end, $google_created) {
+            $processEventForDayOfTheWeekEventCreatedCount = 
+                function (&$dayOfTheWeekEventCreatedCount, $google_start, $google_end, $google_created) {
                     $dayFormat = "N";
                     
                     $google_createdDT = new DateTime($google_created);
                     $google_created_DayOfTheWeek = $google_createdDT->format($dayFormat);
                     $dayOfTheWeekEventCreatedCount[$google_created_DayOfTheWeek]++;                
-                }
+                };
             
+            generateAndStoreTimeData(7, $nonrecurringEvents,  $recurringEvents, $processEventForDayOfTheWeekEventCreatedCount, $user_id, "day_of_the_week_created", 0, $stmt);
             
-            generateAndStoreTimeData(7, $nonrecurringEvents,  $recurringEvents, $processEventForDayOfTheWeekEventCreated, $user_id, "day_of_the_week_created", 0, $stmt);
+            $processEventForDayOfTheWeekEventStartedCount = 
+                function (&$dayOfTheWeekEventStartedCount, $google_start, $google_end, $google_created) {
+                    $dayFormat = "N";
+                    
+                    $google_startDT = new DateTime($google_start);
+                    $google_start_DayOfTheWeek = $google_startDT->format($dayFormat);
+                    
+                    $dayOfTheWeekEventStartedCount[$google_start_DayOfTheWeek]++;                
+                };
             
+            generateAndStoreTimeData(7, $nonrecurringEvents,  $recurringEvents, $processEventForDayOfTheWeekEventStartedCount, $user_id, "day_of_the_week_started", 0, $stmt);
             
             /*
             $dayOfTheWeekNonreccurringEventCreatedCount = array();

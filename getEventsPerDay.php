@@ -12,7 +12,7 @@ function processEventForEventsPerDay(&$eventsPerDay, &$maxTimeDifferenceInDays, 
     //print($dtstartInDays . "<br/>");    
     
     // require that events are scheduled for the future. require that events are not zero length and that events are not all day events
-    if($startUnixTimestamp > 0 && $createdUnixTimestamp > 0 && $eventLengthInSeconds > 0 && $eventLengthInHours < 24) {
+    if($startUnixTimestamp < strtotime("now") && $startUnixTimestamp > 0 && $createdUnixTimestamp > 0 && $eventLengthInSeconds > 0 && $eventLengthInHours < 24) {
         $timeDifferenceInSeconds = $startUnixTimestamp - $createdUnixTimestamp;
         $timeDifferenceInDays = intval( $timeDifferenceInSeconds/(60*60*24) );
         //$timeDifferenceInDays = $timeDifferenceInDays . "";
@@ -29,6 +29,11 @@ function processEventForEventsPerDay(&$eventsPerDay, &$maxTimeDifferenceInDays, 
             }
         }
     }
+    /*
+    if($startUnixTimestamp >= strtotime("now") ) {
+        print("Future event<br/>");
+    }
+    */
 }
     
 function getEventsPerDay(&$eventsPerDay, &$maxTimeDifferenceInDays, $events, $recurring) {
