@@ -49,7 +49,7 @@
         $("#event_type_included").change(function() {
           event_type_included = $("#event_type_included").val();          
           $("#event_type_included option:selected").each(function () {
-            event_type_included_text = "Number of " + $(this).text();
+            event_type_included_text = " of " + $(this).text();
           });
           
           drawChart();
