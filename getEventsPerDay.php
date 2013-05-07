@@ -100,7 +100,7 @@ function calculateRelativePercentageSums(&$relativePercentageSums, &$numOfDaysWi
     }
     
     foreach($eventsPerDay as $dtstartInDays => $eventsThatDay) {
-        sort($eventsThatDay);
+        //sort($eventsThatDay);
         //print_r($eventsThatDaySorted);
         
         for($i = 0;$i < count($eventsThatDay);$i++) {

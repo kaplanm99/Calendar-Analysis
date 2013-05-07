@@ -1,6 +1,6 @@
 <?php
 
-    if(isset($_GET["data_analysis_type"]) && isset($_GET["nonrecurring_included"]) && isset($_GET["recurring_included"]) ) {    
+    if(isset($_GET["data_analysis_type"]) && isset($_GET["nonrecurring_included"]) && isset($_GET["recurring_included"]) && isset($_GET["count_or_length"]) ) {    
         
         $data_analysis_type = strip_tags($_GET["data_analysis_type"]);
         $data_analysis_type = trim($data_analysis_type);
@@ -13,14 +13,18 @@
         $recurring_included = strip_tags($_GET["recurring_included"]);
         $recurring_included = trim($recurring_included);
         $recurring_included = intval($recurring_included);
-
+        
+        $count_or_length = strip_tags($_GET["count_or_length"]);
+        $count_or_length = trim($count_or_length);
+        $count_or_length = intval($count_or_length);
+        
         $data = array();
 
         require('db/config.php');
         $mysqli = new mysqli($host, $username, $password, $db);
-        if ($stmt = $mysqli->prepare("SELECT `user_id`, `array_serialized` FROM `data_analysis` WHERE `data_analysis_type` = ? AND `nonrecurring_included` = ? AND `recurring_included` = ? ;")){
+        if ($stmt = $mysqli->prepare("SELECT `user_id`, `array_serialized` FROM `data_analysis` WHERE `data_analysis_type` = ? AND `nonrecurring_included` = ? AND `recurring_included` = ? AND `count_or_length` = ?;")){
             
-            $stmt->bind_param('sii', $data_analysis_type, $nonrecurring_included, $recurring_included);
+            $stmt->bind_param('siii', $data_analysis_type, $nonrecurring_included, $recurring_included, $count_or_length);
             $stmt->execute();
             $stmt->bind_result($user_id, $array_serialized);
             
@@ -68,7 +72,7 @@
             }
         }
         
-        if($data_analysis_type == "month_of_the_year_created") { 
+        if($data_analysis_type == "month_of_the_year_created" || $data_analysis_type ==  "month_of_the_year_started") { 
             print('{ "cols": [ {"id":"","label":"'.$data_analysis_type.'","pattern":"","type":"string"},');
         
             foreach($data as $user_id => $array_unserialized) {        

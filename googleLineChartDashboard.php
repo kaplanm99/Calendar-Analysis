@@ -57,7 +57,7 @@
          });
          
          var jsonData = $.ajax({
-              url: ("getChartDataJSON.php?"+data_analysis_type+event_type_included),
+              url: ("getChartDataJSON.php?count_or_length=0&"+data_analysis_type+event_type_included),
               dataType:"json",
               async: false
               }).responseText;
