@@ -109,7 +109,7 @@
             }
         }
         
-        if($data_analysis_type == "relative_percentage_sums") { 
+        if($data_analysis_type == "relative_percentage_sums" || $data_analysis_type == "events_created_days_before") { 
             print('{ "cols": [ {"id":"'.$data_analysis_type.'","label":"'.$data_analysis_type.'","pattern":"","type":"number"},');
         
             foreach($data as $user_id => $array_unserialized) {        
@@ -128,6 +128,37 @@
             }
             
             for($i = 0;$i <= $maxTimeDifferenceInDays;$i++) {
+                
+                print('{"c":[{"v":"'.$i.'"},');
+                
+                foreach($data as $user_id => $array_unserialized) { 
+                    print('{"v":'.floatval($array_unserialized[$i]).'},');
+                }
+                
+                print(']},');
+                
+            }
+        }
+        
+        if($data_analysis_type == "num_of_days_with_that_event_amt") {
+            print('{ "cols": [ {"id":"'.$data_analysis_type.'","label":"'.$data_analysis_type.'","pattern":"","type":"number"},');
+        
+            foreach($data as $user_id => $array_unserialized) {        
+                print('{"id":"User '.$user_id.'","label":"User '.$user_id.'","pattern":"","type":"number"},');
+            }
+            
+            print(' ], "rows": [ ');
+            
+                
+            $maxTimeDifferenceInDays = 1;
+            
+            foreach($data as $user_id => $array_unserialized) {            
+                if( count($array_unserialized) > $maxTimeDifferenceInDays) {
+                    $maxTimeDifferenceInDays = count($array_unserialized);
+                }
+            }
+            
+            for($i = 1;$i <= $maxTimeDifferenceInDays;$i++) {
                 
                 print('{"c":[{"v":"'.$i.'"},');
                 

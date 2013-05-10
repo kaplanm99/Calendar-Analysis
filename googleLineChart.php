@@ -39,8 +39,13 @@
         
         $("#data_analysis_type").change(function() {
           data_analysis_type = $("#data_analysis_type").val();
-          $("#event_type_included option:selected").each(function () {
+          $("#data_analysis_type option:selected").each(function () {
             data_analysis_type_text = $(this).text();
+            if(data_analysis_type_text == "Number Events in a Day") {
+                $("#event_type_included option:selected").each(function () {
+                    event_type_included_text = ". Number of Days with that Event Amount for" + $(this).text();
+                });
+            }
           });
           
           drawChart();
@@ -50,6 +55,10 @@
           event_type_included = $("#event_type_included").val();          
           $("#event_type_included option:selected").each(function () {
             event_type_included_text = " of " + $(this).text();
+            
+            if(data_analysis_type_text == "Number Events in a Day") {
+                event_type_included_text = ". Number of Days with that Event Amount for" + $(this).text();
+            }
           });
           
           drawChart();
@@ -75,6 +84,8 @@
             <option value="data_analysis_type=month_of_the_year_created&">Month of the Year Created</option>
             <option value="data_analysis_type=month_of_the_year_started&">Month of the Year Started</option>
             <option value="data_analysis_type=relative_percentage_sums&">Relative Percentage Sums</option>
+            <option value="data_analysis_type=num_of_days_with_that_event_amt&">Number Events in a Day</option>
+            <option value="data_analysis_type=events_created_days_before&">Events Created Days Before</option>
         </select>
 
         <select id="event_type_included">

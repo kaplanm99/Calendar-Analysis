@@ -21,53 +21,6 @@
     
     }
     
-    /*
-    function processEventForDayOfTheWeekEventCreated(&$dayOfTheWeekEventCreatedCount, &$dayOfTheWeekEventStartedCount, &$monthOfTheYearEventCreatedCount, &$eventsPerDay, &$maxTimeDifferenceInDays, $google_start, $google_end, $google_created) {
-        $startUnixTimestamp = strtotime($google_start);
-        $endUnixTimestamp = strtotime($google_end);
-        $createdUnixTimestamp = strtotime($google_created);    
-        
-        $eventLengthInSeconds = $endUnixTimestamp - $startUnixTimestamp;
-        $eventLengthInHours = $eventLengthInSeconds/(60*60);
-        
-        $dtstartInDays = intval($startUnixTimestamp/(60*60*24));
-        
-        // require that events are scheduled for the future. require that events are not zero length and that events are not all day events
-        if($startUnixTimestamp < strtotime("now") && $startUnixTimestamp > 0 && $createdUnixTimestamp > 0 && $eventLengthInSeconds > 0 && $eventLengthInHours < 24) {
-            $timeDifferenceInSeconds = $startUnixTimestamp - $createdUnixTimestamp;
-            $timeDifferenceInDays = intval( $timeDifferenceInSeconds/(60*60*24) );
-            
-            if($timeDifferenceInDays >= 0) {
-                $dayFormat = "N";
-                $monthFormat = "n";
-                    
-                $google_createdDT = new DateTime($google_created);
-                $google_created_DayOfTheWeek = $google_createdDT->format($dayFormat);
-                $google_created_MonthOfTheYear = $google_createdDT->format($monthFormat);
-                
-                $dayOfTheWeekEventCreatedCount[$google_created_DayOfTheWeek]++;
-                $monthOfTheYearEventCreatedCount[$google_created_MonthOfTheYear]++;
-
-                
-                $google_startDT = new DateTime($google_start);
-                $google_start_DayOfTheWeek = $google_startDT->format($dayFormat);
-                    
-                $dayOfTheWeekEventStartedCount[$google_start_DayOfTheWeek]++;
-                
-
-                if(! array_key_exists($dtstartInDays, $eventsPerDay) ) {
-                    $eventsPerDay[$dtstartInDays] = array();
-                }
-                
-                $eventsPerDay[$dtstartInDays][] = $timeDifferenceInDays;
-                
-                if($timeDifferenceInDays > $maxTimeDifferenceInDays) {
-                    $maxTimeDifferenceInDays = $timeDifferenceInDays;
-                }
-            }
-        }
-    }
-    */
     function normalizeAndSerializeInput(&$input) {
         $inputSum = 0;
         
@@ -76,6 +29,28 @@
         }
         
         for($i = 1;$i <= count($input);$i++) {
+            $input[$i] /= $inputSum;        
+        }
+        
+        $inputSerialized = serialize($input);
+        
+        return $inputSerialized;
+    }
+    
+    function normalizeAndSerializeInputKnownLength(&$input, $length) {
+        for($i = 0;$i <= $length;$i++) {
+            if(! array_key_exists($i, $input) ) {
+                $input[$i] = 0;
+            }
+        }
+        
+        $inputSum = 0;
+        
+        for($i = 0;$i <= $length;$i++) {
+            $inputSum += $input[$i];         
+        }
+        
+        for($i = 0;$i <= $length;$i++) {
             $input[$i] /= $inputSum;        
         }
         
@@ -99,6 +74,69 @@
         $relativePercentageSumsSerialized = serialize($relativePercentageSumsNormalized);
         
         return $relativePercentageSumsSerialized;
+    }
+    
+    function calcNumOfDaysWithThatEventCount($eventsPerDay){
+        $numOfDaysWithThatEventCount = array();
+        
+        $maxEventsInADay = 1;
+        
+        foreach($eventsPerDay as $dtstartInDays  => $eventsThatDay) {
+            if(count($eventsThatDay) > $maxEventsInADay) {
+                $maxEventsInADay = count($eventsThatDay);
+            }
+        }
+        
+        for($i = 1;$i <= $maxEventsInADay;$i++) {
+            $numOfDaysWithThatEventCount[$i] = 0;         
+        }
+        
+        foreach($eventsPerDay as $dtstartInDays  => $eventsThatDay) {
+            $numOfDaysWithThatEventCount[count($eventsThatDay)]++;
+        }
+
+        foreach($numOfDaysWithThatEventCount as $dayEventCount => $numOfDaysWithThatCount) {
+            $numOfDaysWithThatEventCount[$dayEventCount] = $numOfDaysWithThatCount/(count($eventsPerDay));
+        }
+        
+        return (serialize($numOfDaysWithThatEventCount));
+    }
+    
+    function generateAndStoreEventsCreatedDaysBefore($nonrecurringEvents,  $recurringEvents, $processEventFunction, $user_id, $data_analysis_type, $count_or_length, &$stmt) {
+        $eventsCreatedDaysBefore = array();
+        $maxDay = -1000000;
+        
+        foreach($nonrecurringEvents as $event) {
+            if(eventPassesFilter($event["google_start"], $event["google_end"], $event["google_created"])){
+                $processEventFunction($eventsCreatedDaysBefore, $maxDay, 
+                $event["google_start"], $event["google_end"], $event["google_created"]);
+                /*
+                $startUnixTimestamp = strtotime($event["google_start"]);
+                $createdUnixTimestamp = strtotime($event["google_created"]);    
+                
+                $timeDifferenceInSeconds = $startUnixTimestamp - $createdUnixTimestamp;
+                $timeDifferenceInDays = intval( $timeDifferenceInSeconds/(60*60*24) );
+                    
+                if( array_key_exists($timeDifferenceInDays, $eventsCreatedDaysBefore) ) {
+                    $eventsCreatedDaysBefore[$timeDifferenceInDays]++;
+                } else {
+                    $eventsCreatedDaysBefore[$timeDifferenceInDays] = 1;
+                }
+                
+                if($timeDifferenceInDays > $maxDay) {
+                    $maxDay = $timeDifferenceInDays;
+                }
+                */
+            }
+        }
+        
+        $eventsCreatedDaysBeforeSerialized = normalizeAndSerializeInputKnownLength($eventsCreatedDaysBefore, $maxDay);
+        
+        $nonrecurring_included = 1;
+        $recurring_included = 0;
+        
+        $stmt->bind_param('isiiis', $user_id, $data_analysis_type,$nonrecurring_included, $recurring_included, $count_or_length, $eventsCreatedDaysBeforeSerialized);
+        $stmt->execute();
     }
     
     function generateAndStoreTimeData($arrayLength, $nonrecurringEvents,  $recurringEvents, $processEventFunction, $user_id, $data_analysis_type, $count_or_length, &$stmt) {
@@ -151,19 +189,9 @@
         
         $stmt->bind_param('isiiis', $user_id, $data_analysis_type, $nonrecurring_included, $recurring_included, $count_or_length, $nonreccurringAndReccurringDataSerialized);
         $stmt->execute();
-        
     }
     
-    function generateAndStoreRelativePercentageSums($nonrecurringEvents,  $recurringEvents, $processEventFunction, $user_id, $data_analysis_type, $count_or_length, &$stmt) {
-        
-        $eventsPerDay = array();
-        $maxTimeDifferenceInDays = 0;
-
-        $eventsPerDayR = array();
-        $maxTimeDifferenceInDaysR = 0;
-        
-        $eventsPerDayNAndR = array();
-        $maxTimeDifferenceInDaysNAndR = 0;
+    function generateEventsPerDayCount($nonrecurringEvents,  $recurringEvents, $processEventFunction, &$eventsPerDay, &$maxTimeDifferenceInDays, &$eventsPerDayR, &$maxTimeDifferenceInDaysR, &$eventsPerDayNAndR, &$maxTimeDifferenceInDaysNAndR) {
         
         foreach($nonrecurringEvents as $event) {
             if(eventPassesFilter($event["google_start"], $event["google_end"], $event["google_created"])){
@@ -196,14 +224,15 @@
         } else {
             $maxTimeDifferenceInDaysNAndR = $maxTimeDifferenceInDaysR;
         }
-        
+    }
+    
+    function generateAndStoreRelativePercentageSums($eventsPerDay, $maxTimeDifferenceInDays, $eventsPerDayR, $maxTimeDifferenceInDaysR, $eventsPerDayNAndR, $maxTimeDifferenceInDaysNAndR, $user_id, $data_analysis_type, $count_or_length, &$stmt) {
         
         $relativePercentageSumsSerialized = calculateRelativePercentageSumsNormalizedAndSerialized($eventsPerDay, $maxTimeDifferenceInDays);
         
         $relativePercentageSumsRSerialized = calculateRelativePercentageSumsNormalizedAndSerialized($eventsPerDayR, $maxTimeDifferenceInDaysR);
 
         $relativePercentageSumsNAndRSerialized = calculateRelativePercentageSumsNormalizedAndSerialized($eventsPerDayNAndR, $maxTimeDifferenceInDaysNAndR);
-        
         
         $nonrecurring_included = 1;
         $recurring_included = 0;
@@ -221,8 +250,33 @@
         $recurring_included = 1;
         
         $stmt->bind_param('isiiis', $user_id, $data_analysis_type, $nonrecurring_included, $recurring_included, $count_or_length, $relativePercentageSumsNAndRSerialized);
+        $stmt->execute();        
+    }
+    
+    function generateAndStoreNumOfDaysWithThatEventAmt($eventsPerDay, $eventsPerDayR, $eventsPerDayNAndR, $user_id, $data_analysis_type, $count_or_length, &$stmt) {
+        $numOfDaysWithThatEventCountNSerialized = calcNumOfDaysWithThatEventCount($eventsPerDay);
+
+        $numOfDaysWithThatEventCountRSerialized = calcNumOfDaysWithThatEventCount($eventsPerDayR);
+        
+        $numOfDaysWithThatEventCountNAndRSerialized = calcNumOfDaysWithThatEventCount($eventsPerDayNAndR);
+        
+        $nonrecurring_included = 1;
+        $recurring_included = 0;
+        
+        $stmt->bind_param('isiiis', $user_id, $data_analysis_type, $nonrecurring_included, $recurring_included, $count_or_length, $numOfDaysWithThatEventCountNSerialized);
+        $stmt->execute();
+       
+        $nonrecurring_included = 0;
+        $recurring_included = 1;
+        
+        $stmt->bind_param('isiiis', $user_id, $data_analysis_type, $nonrecurring_included, $recurring_included, $count_or_length, $numOfDaysWithThatEventCountRSerialized);
         $stmt->execute();
         
+        $nonrecurring_included = 1;
+        $recurring_included = 1;
+        
+        $stmt->bind_param('isiiis', $user_id, $data_analysis_type, $nonrecurring_included, $recurring_included, $count_or_length, $numOfDaysWithThatEventCountNAndRSerialized);
+        $stmt->execute();
     }
     
     
@@ -387,10 +441,114 @@
                     }                                    
                 };
             
-            generateAndStoreRelativePercentageSums($nonrecurringEvents,  $recurringEvents, $processEventForRelativePercentageSumsCount, $user_id, "relative_percentage_sums", 0, $stmt);
+            $eventsPerDay = array();
+            $maxTimeDifferenceInDays = 0;
+
+            $eventsPerDayR = array();
+            $maxTimeDifferenceInDaysR = 0;
+        
+            $eventsPerDayNAndR = array();
+            $maxTimeDifferenceInDaysNAndR = 0;
+            
+            generateEventsPerDayCount($nonrecurringEvents,  $recurringEvents, $processEventForRelativePercentageSumsCount, &$eventsPerDay, &$maxTimeDifferenceInDays, &$eventsPerDayR, &$maxTimeDifferenceInDaysR, &$eventsPerDayNAndR, &$maxTimeDifferenceInDaysNAndR);
+            
+            generateAndStoreRelativePercentageSums($eventsPerDay, $maxTimeDifferenceInDays, $eventsPerDayR, $maxTimeDifferenceInDaysR, $eventsPerDayNAndR, $maxTimeDifferenceInDaysNAndR, $user_id, "relative_percentage_sums", 0, $stmt);
+            
+            generateAndStoreNumOfDaysWithThatEventAmt($eventsPerDay, $eventsPerDayR, $eventsPerDayNAndR, $user_id, "num_of_days_with_that_event_amt", 0, &$stmt);
+            /*
+            $processEventForEventsCreatedDaysBeforeStartCount = 
+                function (&$eventsCreatedDaysBeforeStartCount, &$maxDay, $google_start, $google_end, $google_created) {
+                    
+                    $startUnixTimestamp = strtotime($google_start);
+                    $createdUnixTimestamp = strtotime($google_created);    
+                    
+                    $timeDifferenceInSeconds = $startUnixTimestamp - $createdUnixTimestamp;
+                    $timeDifferenceInDays = intval( $timeDifferenceInSeconds/(60*60*24) );
+                        
+                    if( array_key_exists($timeDifferenceInDays, $eventsCreatedDaysBeforeStartCount) ) {
+                        $eventsCreatedDaysBeforeStartCount[$timeDifferenceInDays]++;
+                    } else {
+                        $eventsCreatedDaysBeforeStartCount[$timeDifferenceInDays] = 1;
+                    }
+                    
+                    if($timeDifferenceInDays > $maxDay) {
+                        $maxDay = $timeDifferenceInDays;
+                    }
+                                        
+                };
+            */
+            //generateAndStoreTimeData($maxTimeDifferenceInDaysNAndR, $nonrecurringEvents,  $recurringEvents, $processEventForEventsCreatedDaysBeforeStartCount, $user_id, "event_created_days_before_start_count", 0, $stmt);
+            
+            $processEventForEventsCreatedDaysBeforeCount = 
+                function (&$eventsCreatedDaysBefore, &$maxDay, $google_start, $google_end, $google_created) {
+                     $startUnixTimestamp = strtotime($event["google_start"]);
+                    $createdUnixTimestamp = strtotime($event["google_created"]);    
+                    
+                    $timeDifferenceInSeconds = $startUnixTimestamp - $createdUnixTimestamp;
+                    $timeDifferenceInDays = intval( $timeDifferenceInSeconds/(60*60*24) );
+                        
+                    if( array_key_exists($timeDifferenceInDays, $eventsCreatedDaysBefore) ) {
+                        $eventsCreatedDaysBefore[$timeDifferenceInDays]++;
+                    } else {
+                        $eventsCreatedDaysBefore[$timeDifferenceInDays] = 1;
+                    }
+                    
+                    if($timeDifferenceInDays > $maxDay) {
+                        $maxDay = $timeDifferenceInDays;
+                    }
+                };
             
             
+            generateAndStoreEventsCreatedDaysBefore($nonrecurringEvents,  $recurringEvents, $processEventForEventsCreatedDaysBeforeCount, $user_id, "events_created_days_before", 0, &$stmt);
             
+            /*
+            $eventsCreatedDaysBefore = array();
+            $maxDay = -1000000;
+            
+            foreach($nonrecurringEvents as $event) {
+                if(eventPassesFilter($event["google_start"], $event["google_end"], $event["google_created"])){
+                    $startUnixTimestamp = strtotime($event["google_start"]);
+                    $createdUnixTimestamp = strtotime($event["google_created"]);    
+                    
+                    $timeDifferenceInSeconds = $startUnixTimestamp - $createdUnixTimestamp;
+                    $timeDifferenceInDays = intval( $timeDifferenceInSeconds/(60*60*24) );
+                        
+                    if( array_key_exists($timeDifferenceInDays, $eventsCreatedDaysBefore) ) {
+                        $eventsCreatedDaysBefore[$timeDifferenceInDays]++;
+                    } else {
+                        $eventsCreatedDaysBefore[$timeDifferenceInDays] = 1;
+                    }
+                    
+                    if($timeDifferenceInDays > $maxDay) {
+                        $maxDay = $timeDifferenceInDays;
+                    }
+                }
+            }
+            
+            $eventsCreatedDaysBeforeSum = 0;
+            
+            for($i = 0;$i <= $maxDay;$i++) {
+                if(! array_key_exists($i, $eventsCreatedDaysBefore) ) {
+                    $eventsCreatedDaysBefore[$i] = 0;
+                } else {
+                    $eventsCreatedDaysBeforeSum += $eventsCreatedDaysBefore[$i];
+                }
+            }
+            
+            for($i = 0;$i <= $maxDay;$i++) {
+                $eventsCreatedDaysBefore[$i] /= $eventsCreatedDaysBeforeSum;
+            }
+            
+            $eventsCreatedDaysBeforeSerialized = serialize($eventsCreatedDaysBefore);
+            
+            $nonrecurring_included = 1;
+            $recurring_included = 0;
+            $data_analysis_type = "events_created_days_before";
+            $count_or_length = 0;
+            
+            $stmt->bind_param('isiiis', $user_id, $data_analysis_type,$nonrecurring_included, $recurring_included, $count_or_length, $eventsCreatedDaysBeforeSerialized);
+            $stmt->execute();
+            */
         }
         
         $stmt->close();

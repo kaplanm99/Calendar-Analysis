@@ -35,7 +35,8 @@ function processEventForEventsPerDay(&$eventsPerDay, &$maxTimeDifferenceInDays, 
     }
     */
 }
-    
+
+/*    
 function getEventsPerDay(&$eventsPerDay, &$maxTimeDifferenceInDays, $events, $recurring) {
 
     if($recurring) {
@@ -93,6 +94,7 @@ function getEventsPerDay(&$eventsPerDay, &$maxTimeDifferenceInDays, $events, $re
 
         
 }
+*/
 
 function calculateRelativePercentageSums(&$relativePercentageSums, &$numOfDaysWithEvents, $eventsPerDay, $maxTimeDifferenceInDays) {
     for($i = 0;$i < $maxTimeDifferenceInDays;$i++) {
